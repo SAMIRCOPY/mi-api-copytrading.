@@ -57,5 +57,19 @@ async def obtener_senales():
     finally:
         conn.close()
 
+# Ruta para limpiar la base de datos (GET)
+@app.get("/clear-signals")
+async def limpiar_senales():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM operaciones")
+        conn.commit()
+        return {"status": "Base de datos limpiada correctamente"}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
