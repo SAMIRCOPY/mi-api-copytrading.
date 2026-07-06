@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
-# Inicializar DB
+# Inicializar base de datos
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -19,17 +19,17 @@ def init_db():
 
 init_db()
 
+# Ruta para recibir señales (POST)
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
     try:
         body = await request.body()
         body_str = body.decode('utf-8').strip()
         
-        # Corrección: procesar solo el primer JSON si vienen datos extra
-        # Buscamos el primer objeto JSON que cierra con '}'
+        # Limpieza para extraer solo el primer objeto JSON válido
         json_str = body_str.split('}')[0] + '}'
-        
         data = json.loads(json_str)
+        
         print(f"Datos procesados correctamente: {data}")
         
         conn = sqlite3.connect(DB_PATH)
@@ -43,26 +43,19 @@ async def recibir_senal(request: Request):
         print(f"Error procesando: {e}")
         return {"status": "error"}
 
+# Ruta para consultar señales (GET)
 @app.get("/get-signals")
 async def obtener_senales():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
-    rows = cursor.fetchall()
-    conn.close()
-    return {"senales_activas": rows}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-@app.get("/get-signals")
-async def obtener_senales():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
-    rows = cursor.fetchall()
-    conn.close()
-    return {"senales_activas": rows}
+    try:
+        cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
+        rows = cursor.fetchall()
+        return {"senales_activas": rows}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
