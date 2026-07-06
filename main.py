@@ -19,7 +19,6 @@ init_db()
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
     data = await request.json()
-    # data contendrá: {"symbol": "XAUUSD", "volume": 0.1, "entry": 0}
     
     conn = sqlite3.connect("trading_data.db")
     cursor = conn.cursor()
@@ -40,7 +39,7 @@ async def recibir_senal(request: Request):
 # Endpoint para consultar cuánto debe un cliente (el 30%)
 @app.get("/api/balance/{cliente_id}")
 async def obtener_balance(cliente_id: int):
-    # Lógica para sumar profits cerrados y calcular el 30%
+    # Lógica pendiente de implementar
     return {"cliente": cliente_id, "comision_pendiente": 0.0}
 
 if __name__ == "__main__":
