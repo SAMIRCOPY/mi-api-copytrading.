@@ -2,12 +2,10 @@ from fastapi import FastAPI, Request
 import sqlite3
 import uvicorn
 import json
-import os
 
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
-# Inicializar base de datos
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -19,19 +17,11 @@ def init_db():
 
 init_db()
 
-# Ruta para recibir señales (POST)
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
     try:
         body = await request.body()
-        body_str = body.decode('utf-8').strip()
-        
-        # Limpieza para extraer solo el primer objeto JSON válido
-        json_str = body_str.split('}')[0] + '}'
-        data = json.loads(json_str)
-        
-        print(f"Datos procesados correctamente: {data}")
-        
+        data = json.loads(body.decode('utf-8').split('}')[0] + '}')
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
@@ -40,36 +30,22 @@ async def recibir_senal(request: Request):
         conn.close()
         return {"status": "ok"}
     except Exception as e:
-        print(f"Error procesando: {e}")
-        return {"status": "error"}
+        return {"status": "error", "detail": str(e)}
 
-# Ruta para consultar señales (GET)
 @app.get("/get-signals")
 async def obtener_senales():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
-        rows = cursor.fetchall()
-        return {"senales_activas": rows}
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        conn.close()
+    cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
+    rows = cursor.fetchall()
+    conn.close()
+    return {"senales_activas": rows}
 
-# Ruta para limpiar la base de datos (GET)
 @app.get("/clear-signals")
-async def limpiar_senales():
+async def limpiar():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    try:
-        cursor.execute("DELETE FROM operaciones")
-        conn.commit()
-        return {"status": "Base de datos limpiada correctamente"}
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        conn.close()
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    cursor.execute("DELETE FROM operaciones")
+    conn.commit()
+    conn.close()
+    return {"status": "limpio"}
