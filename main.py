@@ -4,7 +4,7 @@ import uvicorn
 import json
 
 app = FastAPI()
-DB_PATH = "trading_data.db"
+DB_PATH = "/data/trading_data.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
