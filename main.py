@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Request
 import sqlite3
-import uvicorn
 import json
 
 app = FastAPI()
@@ -25,7 +24,7 @@ async def recibir_senal(request: Request):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
-                       (data.get('symbol'), data.get('volume'), data.get('entry'), 'ABIERTA'))
+                       (data.get('symbol'), data.get('volume'), data.get('type'), 'ABIERTA'))
         conn.commit()
         conn.close()
         return {"status": "ok"}
@@ -36,16 +35,16 @@ async def recibir_senal(request: Request):
 async def obtener_senales():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM operaciones WHERE status = 'ABIERTA'")
+    cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA'")
     rows = cursor.fetchall()
     conn.close()
     return {"senales_activas": rows}
 
-@app.get("/clear-signals")
-async def limpiar():
+@app.post("/confirmar-ejecucion/{operacion_id}")
+async def confirmar_ejecucion(operacion_id: int):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM operaciones")
+    cursor.execute("UPDATE operaciones SET status = 'PROCESADA' WHERE id = ?", (operacion_id,))
     conn.commit()
     conn.close()
-    return {"status": "limpio"}
+    return {"status": "confirmado"}
