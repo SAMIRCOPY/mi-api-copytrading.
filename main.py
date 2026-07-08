@@ -19,7 +19,10 @@ init_db()
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
     try:
-        data = await request.json()
+        # Leemos el cuerpo crudo para evitar el error de decodificación estricto
+        body = await request.body()
+        data = json.loads(body.decode('utf-8'))
+        
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
@@ -28,7 +31,8 @@ async def recibir_senal(request: Request):
         conn.close()
         return {"status": "ok"}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        # Capturamos el error para que el servidor siga vivo aunque falle el JSON
+        return {"status": "error", "message": "Error al procesar JSON"}
 
 @app.get("/get-signals")
 async def obtener_senales():
