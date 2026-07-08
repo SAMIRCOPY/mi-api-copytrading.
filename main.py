@@ -5,6 +5,7 @@ import json
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
+# Inicializar DB
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -13,23 +14,18 @@ def init_db():
                        entry_type INTEGER, status TEXT)''')
     conn.commit()
     conn.close()
-
 init_db()
 
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
-    try:
-        body = await request.body()
-        data = json.loads(body.decode('utf-8').split('}')[0] + '}')
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
-                       (data.get('symbol'), data.get('volume'), data.get('type'), 'ABIERTA'))
-        conn.commit()
-        conn.close()
-        return {"status": "ok"}
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
+    data = await request.json()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
+                   (data.get('symbol'), data.get('volume'), data.get('type'), 'ABIERTA'))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
 
 @app.get("/get-signals")
 async def obtener_senales():
@@ -40,11 +36,11 @@ async def obtener_senales():
     conn.close()
     return {"senales_activas": rows}
 
-@app.post("/confirmar-ejecucion/{operacion_id}")
-async def confirmar_ejecucion(operacion_id: int):
+@app.post("/confirmar-ejecucion/{id}")
+async def confirmar(id: int):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("UPDATE operaciones SET status = 'PROCESADA' WHERE id = ?", (operacion_id,))
+    cursor.execute("UPDATE operaciones SET status = 'PROCESADA' WHERE id = ?", (id,))
     conn.commit()
     conn.close()
-    return {"status": "confirmado"}
+    return {"status": "procesado"}
