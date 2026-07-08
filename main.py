@@ -29,7 +29,7 @@ async def recibir_senal(request: Request):
         conn.close()
         return {"status": "ok"}
     except Exception as e:
-        return {"status": "error", "message": "Error al procesar JSON"}
+        return {"status": "error", "message": str(e)}
 
 @app.get("/get-signals")
 async def obtener_senales():
@@ -40,7 +40,6 @@ async def obtener_senales():
     conn.close()
     return {"senales_activas": [list(row)] if row else []}
 
-# Ruta corregida para recibir confirmaciones
 @app.post("/confirmar-ejecucion/{id}")
 async def confirmar(id: int):
     conn = sqlite3.connect(DB_PATH)
