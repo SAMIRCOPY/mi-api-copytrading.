@@ -40,6 +40,7 @@ async def obtener_senales():
     conn.close()
     return {"senales_activas": [list(row)] if row else []}
 
+# Ruta corregida para recibir confirmaciones
 @app.post("/confirmar-ejecucion/{id}")
 async def confirmar(id: int):
     conn = sqlite3.connect(DB_PATH)
