@@ -1,34 +1,58 @@
+from fastapi import FastAPI, Request
 import sqlite3
-from fastapi import FastAPI
+import json
 
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
-# Asegurar que la tabla siempre se cree al arrancar
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS operaciones 
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                       symbol TEXT, 
-                       volume REAL, 
-                       entry_type INTEGER, 
-                       status TEXT)''')
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, volume REAL, 
+                       entry_type INTEGER, status TEXT)''')
     conn.commit()
     conn.close()
 
-# Ejecutar al iniciar la aplicación
 init_db()
+
+@app.post("/api/senal")
+async def recibir_senal(request: Request):
+    try:
+        data = await request.json()
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (?, ?, ?, ?)",
+                       (data.get('symbol'), data.get('volume'), data.get('type'), 'ABIERTA'))
+        conn.commit()
+        conn.close()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/get-signals")
 async def obtener_senales():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA'")
-        rows = cursor.fetchall()
-        return {"senales_activas": rows}
-    except sqlite3.OperationalError:
-        return {"error": "Tabla no encontrada"}
-    finally:
-        conn.close()
+    cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA' LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return {"senales_activas": [list(row)] if row else []}
+
+@app.post("/confirmar-ejecucion/{id}")
+async def confirmar(id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE operaciones SET status = 'PROCESADA' WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return {"status": "procesado"}
+
+@app.get("/clear-signals")
+async def limpiar():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM operaciones")
+    conn.commit()
+    conn.close()
+    return {"status": "limpio"}
