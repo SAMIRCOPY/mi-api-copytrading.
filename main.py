@@ -5,16 +5,7 @@ import json
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
-# Inicializar DB
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS operaciones 
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, volume REAL, 
-                       entry_type INTEGER, status TEXT)''')
-    conn.commit()
-    conn.close()
-init_db()
+# ... (mantén tu función init_db igual) ...
 
 @app.post("/api/senal")
 async def recibir_senal(request: Request):
@@ -36,6 +27,7 @@ async def obtener_senales():
     conn.close()
     return {"senales_activas": rows}
 
+# RUTA CORREGIDA: Esta debe coincidir exactamente con el esclavo
 @app.post("/confirmar-ejecucion/{id}")
 async def confirmar(id: int):
     conn = sqlite3.connect(DB_PATH)
@@ -44,3 +36,12 @@ async def confirmar(id: int):
     conn.commit()
     conn.close()
     return {"status": "procesado"}
+
+@app.get("/clear-signals")
+async def limpiar():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM operaciones")
+    conn.commit()
+    conn.close()
+    return {"status": "limpio"}
