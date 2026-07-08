@@ -5,7 +5,13 @@ import json
 app = FastAPI()
 DB_PATH = "trading_data.db"
 
-# Inicializar Base de Datos
+from fastapi import FastAPI, Request
+import sqlite3
+
+app = FastAPI()
+DB_PATH = "trading_data.db"
+
+# Asegurar que la tabla existe siempre al iniciar
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -14,6 +20,7 @@ def init_db():
                        entry_type INTEGER, status TEXT)''')
     conn.commit()
     conn.close()
+
 init_db()
 
 @app.post("/api/senal")
@@ -31,10 +38,11 @@ async def recibir_senal(request: Request):
 async def obtener_senales():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA'")
-    rows = cursor.fetchall()
+    cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA' LIMIT 1")
+    row = cursor.fetchone()
     conn.close()
-    return {"senales_activas": rows}
+    # Formato: [[id, symbol, volume, type]] para que el esclavo lo lea bien
+    return {"senales": [list(row)] if row else []}
 
 @app.post("/confirmar-ejecucion/{id}")
 async def confirmar(id: int):
