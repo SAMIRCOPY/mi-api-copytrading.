@@ -16,7 +16,9 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS operaciones 
                       (id SERIAL PRIMARY KEY, symbol TEXT, volume REAL, 
-                       entry_type INTEGER, status TEXT)''')
+                       entry_type INTEGER, accion INTEGER DEFAULT 0, status TEXT)''')
+    # Por si la tabla ya existía sin la columna "accion" (de una versión anterior)
+    cursor.execute('''ALTER TABLE operaciones ADD COLUMN IF NOT EXISTS accion INTEGER DEFAULT 0''')
     conn.commit()
     cursor.close()
     conn.close()
@@ -31,7 +33,8 @@ async def recibir_senal(request: Request):
 
         symbol = data.get('symbol')
         volume = data.get('volume')
-        tipo   = data.get('type')
+        tipo   = data.get('type')          # 0 = BUY, 1 = SELL
+        accion = data.get('entry', 0)      # 0 = ABRIR, 1 = CERRAR
 
         if symbol is None or volume is None or tipo is None:
             return {"status": "error", "detail": "Faltan campos symbol/volume/type"}
@@ -39,8 +42,8 @@ async def recibir_senal(request: Request):
         conn = get_conn()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO operaciones (symbol, volume, entry_type, status) VALUES (%s, %s, %s, %s)",
-            (symbol, volume, tipo, 'ABIERTA')
+            "INSERT INTO operaciones (symbol, volume, entry_type, accion, status) VALUES (%s, %s, %s, %s, %s)",
+            (symbol, volume, tipo, accion, 'ABIERTA')
         )
         conn.commit()
         cursor.close()
@@ -54,12 +57,13 @@ async def recibir_senal(request: Request):
 async def obtener_senales():
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, symbol, volume, entry_type FROM operaciones WHERE status = 'ABIERTA'")
+    cursor.execute("SELECT id, symbol, volume, entry_type, accion FROM operaciones WHERE status = 'ABIERTA'")
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    senales = [[row[0], row[1], row[2], row[3], 0] for row in rows]
+    # Formato exacto que espera el EA esclavo: [id, symbol, volume, type, entry]
+    senales = [[row[0], row[1], row[2], row[3], row[4]] for row in rows]
 
     return {"senales_activas": senales}
 
